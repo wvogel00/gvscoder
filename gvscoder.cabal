@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b12e4537b6fc8654fbdcd79fd0bcd9ce11e973d6604fb6baec76205c11deefed
+-- hash: f4d6eda40a1aa1939910c962e6fb3b13c4cf924ae798b4c62b870d8362adc2d1
 
 name:           gvscoder
 version:        0.1.0.0
@@ -36,7 +36,8 @@ library
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      aeson >=1.4
+    , base >=4.7 && <5
     , bytestring
     , hscurses
     , http-client
@@ -44,6 +45,7 @@ library
     , http-conduit >=2.3
     , parsec >=3.1
     , serialport
+    , time >=1.9
     , trifecta >=1.7
   default-language: Haskell2010
 
@@ -55,7 +57,8 @@ executable gvscoder-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson >=1.4
+    , base >=4.7 && <5
     , bytestring
     , gvscoder
     , hscurses
@@ -64,6 +67,7 @@ executable gvscoder-exe
     , http-conduit >=2.3
     , parsec >=3.1
     , serialport
+    , time >=1.9
     , trifecta >=1.7
   default-language: Haskell2010
 
@@ -76,7 +80,8 @@ test-suite gvscoder-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson >=1.4
+    , base >=4.7 && <5
     , bytestring
     , gvscoder
     , hscurses
@@ -85,5 +90,6 @@ test-suite gvscoder-test
     , http-conduit >=2.3
     , parsec >=3.1
     , serialport
+    , time >=1.9
     , trifecta >=1.7
   default-language: Haskell2010
