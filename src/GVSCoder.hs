@@ -18,30 +18,31 @@ import Data.Aeson (object, (.=), encode)
 
 acPath = "https://atcoder.jp/contests/abc171/submissions/me"
 gvsAgent = "gvscoder/1.0"
-gvsCookie = "cookiename=gvscoder"
 
 -- Loginリクエストの生成
 makeLoginReq req name pass csrf = req{
     method = "POST",
     queryString = "",
-    requestHeaders = [
+    requestHeaders = requestHeaders req ++ [
+        ("User-Agent", gvsAgent),
         ("username", BS.pack name),
-        ("password", BS.pack pass),
-        ("csrf_token", BS.pack csrf)
+        ("password", BS.pack pass)
+        --("csrf_token", BS.pack csrf)
         ],
     requestBody = RequestBodyLBS $ encode reqObj
     } where
-        reqObj = object ["username" .= name, "password" .= pass, "csrf_token" .= csrf]
+        reqObj = object ["username" .= name, "password" .= pass]--, "csrf_token" .= csrf]
 
 -- CSRFトークンのパース
 findCSRFToken :: BS.ByteString -> Result String
 findCSRFToken = parseByteString csrfP (Columns 0 0).head.filter (isInfixOf "csrf_token".BS.unpack). BS.lines
+    where 
 
 startGVSCoder = do
     username <- putStrLn "username:" >> getLine
     password <- putStrLn "password:" >> getLine
     port <- putStrLn "serial port name:" >> getLine
-    print username
+    putStrLn $ username ++ ", welcome to GVS-Coder!"
     -- setCurses
     manager <- newManager tlsManagerSettings
     initReq' <- parseRequest "https://atcoder.jp/login"
@@ -52,18 +53,20 @@ startGVSCoder = do
     let csrfToken = findCSRFToken . toStrict $ responseBody getLoginRes
     case csrfToken of
         Success token -> do
+            BS.putStr "CSRF:Token : " >> BS.putStrLn (BS.pack token)
             -- Cookieの挿入
             now <- getCurrentTime
-            let req = fst $ insertCookiesIntoRequest initReq gvsCookie now
+            let req' = makeLoginReq initReq username password token
+            let req = fst $ insertCookiesIntoRequest req' gvsCookie now
+            BS.putStrLn.BS.pack.show $  req
             -- loginのPOST
-            postLoginRes <- httpLbs (makeLoginReq req username password token) manager
+            postLoginRes <- httpLbs req manager
             putStrLn.show $ "POST LoginPage : " ++ show (responseStatus postLoginRes)
             BS.putStrLn.toStrict $ responseBody postLoginRes
             putStrLn $ replicate 20 '='
         Failure e -> BS.putStrLn "fail to get CSRF token.." >> print e
 
     -- drawLnColored 1 "GVS-Coder"
-    putStrLn $ "CSRF:Token : " ++ show csrfToken
     {-
     gvs <- openGVS port
     loopGVS initRequest manager gvs name <*> getACs initRequest manager username

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f4d6eda40a1aa1939910c962e6fb3b13c4cf924ae798b4c62b870d8362adc2d1
+-- hash: 769cff587fce9cb479fbc7183a8d6ca0ffed5d8450d9ee91d77fb451b9cba43c
 
 name:           gvscoder
 version:        0.1.0.0
@@ -45,6 +45,7 @@ library
     , http-conduit >=2.3
     , parsec >=3.1
     , serialport
+    , text
     , time >=1.9
     , trifecta >=1.7
   default-language: Haskell2010
@@ -67,6 +68,7 @@ executable gvscoder-exe
     , http-conduit >=2.3
     , parsec >=3.1
     , serialport
+    , text
     , time >=1.9
     , trifecta >=1.7
   default-language: Haskell2010
@@ -90,6 +92,7 @@ test-suite gvscoder-test
     , http-conduit >=2.3
     , parsec >=3.1
     , serialport
+    , text
     , time >=1.9
     , trifecta >=1.7
   default-language: Haskell2010
