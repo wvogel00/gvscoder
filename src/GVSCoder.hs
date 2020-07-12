@@ -14,22 +14,15 @@ import Parser
 
 acPath = "https://atcoder.jp/contests/abc171/submissions/me"
 
-getLoginPage req manager = do
-    response <- httpLbs req manager
-    return response
-
-postLoginPage baseReq manager name pass csrf = do
-    let req = baseReq{
-                    method = "POST",
-                    queryString = "",
-                    requestHeaders = [
-                    --    ("username",name),
-                      --  ("password",pass),
-                        ("csrf_token",BS.pack csrf)],
-                    requestBody = ""
-                    }
-    res <- httpLbs req manager
-    return res
+makeLoginReq req name pass csrf = req{
+    method = "POST",
+    queryString = "",
+    requestHeaders = [
+        ("username",name),
+        ("password",pass),
+        ("csrf_token",BS.pack csrf)],
+    requestBody = ""
+    }
 
 findCSRFToken :: BS.ByteString -> Result String
 findCSRFToken = parseByteString csrfP (Columns 0 0).head.filter (isInfixOf "csrf_token".BS.unpack). BS.lines
@@ -38,24 +31,24 @@ startGVSCoder = do
     username <- putStrLn "username:" >> BS.getLine
     password <- putStrLn "password:" >> BS.getLine
     port <- putStrLn "serial port name:" >> BS.getLine
+    print username
     setCurses
     manager <- newManager tlsManagerSettings
-    initialRequest <- parseRequest "https://atcoder.jp/login"
-    getLoginRes <- getLoginPage initialRequest manager
+    initReq <- parseRequest "https://atcoder.jp/login"
+    getLoginRes <- httpLbs initReq manager
     drawLn.show $ "GET LoginPage : " ++ show (responseStatus getLoginRes)
     let csrfToken = findCSRFToken . toStrict $ responseBody getLoginRes
     case csrfToken of
         Success token -> do
-            drawLn token
-            postLoginRes <- postLoginPage initialRequest manager username password token
+            postLoginRes <- httpLbs (makeLoginReq initReq username password token) manager
             drawLn.show $ "POST LoginPage : " ++ show (responseStatus postLoginRes)
             drawLn $ replicate 20 '='
             drawLn.show $ responseBody postLoginRes
         Failure e -> BS.putStrLn "fail to get CSRF token.." >> print e
 
     drawLnColored 1 "GVS-Coder"
-    drawLnColored 1 $ "CSRF:Token" ++ show csrfToken
-    drawLnColored 1 $ replicate 20 '-'
+    drawLnColored 2 $ "CSRF:Token : " ++ show csrfToken
+    drawLn $ replicate 20 '-'
     {-
     gvs <- openGVS port
     loopGVS initRequest manager gvs name <*> getACs initRequest manager username
@@ -63,8 +56,7 @@ startGVSCoder = do
     waitAnyKey
     finishCurse
 
-getACs req manager name = do
-    return (1,1)
+getACs req manager name = return (1,1)
 
 loopGVS req manager gvs name (prevAC, prevOthers) = do
     (nowAC, nowOthers) <- getACs req manager name
