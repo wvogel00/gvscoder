@@ -22,27 +22,27 @@ gvsAgent = "gvscoder/1.0"
 -- Loginリクエストの生成
 makeLoginReq req name pass csrf = req{
     method = "POST",
-    queryString = "",
-    requestHeaders = requestHeaders req ++ [
-        ("User-Agent", gvsAgent),
-        ("username", BS.pack name),
-        ("password", BS.pack pass)
-        --("csrf_token", BS.pack csrf)
-        ],
-    requestBody = RequestBodyLBS $ encode reqObj
-    } where
-        reqObj = object ["username" .= name, "password" .= pass]--, "csrf_token" .= csrf]
-
+    queryString = BS.concat [
+            "?csrf_token=", (BS.pack csrf),
+            "&username=", BS.pack name,
+            "&password=", BS.pack pass
+            ]
+    }
+    
 -- CSRFトークンのパース
 findCSRFToken :: BS.ByteString -> Result String
 findCSRFToken = parseByteString csrfP (Columns 0 0).head.filter (isInfixOf "csrf_token".BS.unpack). BS.lines
-    where 
+
+attatchCookie req' cookie = do
+    now <- getCurrentTime
+    return . fst $ insertCookiesIntoRequest req' cookie now
 
 startGVSCoder = do
     username <- putStrLn "username:" >> getLine
     password <- putStrLn "password:" >> getLine
     port <- putStrLn "serial port name:" >> getLine
     putStrLn $ username ++ ", welcome to GVS-Coder!"
+
     -- setCurses
     manager <- newManager tlsManagerSettings
     initReq' <- parseRequest "https://atcoder.jp/login"
@@ -54,17 +54,19 @@ startGVSCoder = do
     case csrfToken of
         Success token -> do
             BS.putStr "CSRF:Token : " >> BS.putStrLn (BS.pack token)
-            -- Cookieの挿入
-            now <- getCurrentTime
             let req' = makeLoginReq initReq username password token
-            let req = fst $ insertCookiesIntoRequest req' gvsCookie now
-            BS.putStrLn.BS.pack.show $  req
+            -- Cookieの挿入
+            req <- attatchCookie req' gvsCookie
+            BS.putStrLn . BS.pack . show $ req
             -- loginのPOST
             postLoginRes <- httpLbs req manager
             putStrLn.show $ "POST LoginPage : " ++ show (responseStatus postLoginRes)
             BS.putStrLn.toStrict $ responseBody postLoginRes
             putStrLn $ replicate 20 '='
-        Failure e -> BS.putStrLn "fail to get CSRF token.." >> print e
+            case responseStatus postLoginRes of
+                status200 -> loopGVS req manager username (0,0)
+                _ -> BS.putStrLn "認証に失敗しました"
+        Failure e -> BS.putStrLn "CSRFトークンの取得に失敗しました.." >> print e
 
     -- drawLnColored 1 "GVS-Coder"
     {-
@@ -76,11 +78,12 @@ startGVSCoder = do
 
 getACs req manager name = return (1,1)
 
-loopGVS req manager gvs name (prevAC, prevOthers) = do
+loopGVS req manager name (prevAC, prevOthers) = do
     (nowAC, nowOthers) <- getACs req manager name
     if nowAC > prevAC 
-        then drawLnColored 3 "Accepted!!"
+        then putStrLn "Accepted!" --drawLnColored 3 "Accepted!!"
         else if nowOthers > prevOthers
-            then drawLnColored 6 "Rejected!!" >> drawLnColored 1 "GVS ON" >> gvsON gvs
+            --then drawLnColored 6 "Rejected!!" >> drawLnColored 1 "GVS ON" >> gvsON gvs
+            then putStrLn "Rejected!!"
             else return ()
-    loopGVS req manager gvs name (prevAC, prevOthers)
+    -- loopGVS req manager gvs name (nowAC, nowOthers)
