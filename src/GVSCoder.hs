@@ -7,8 +7,6 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import qualified Data.ByteString.Char8 as BS
 import Data.ByteString.Lazy.Char8 (toStrict)
 import Text.Trifecta hiding (draw)
-import Text.Trifecta.Delta (Delta(..))
-import Data.List (isInfixOf)
 import Control.Applicative
 import GVS
 import Parser
@@ -21,18 +19,14 @@ acPath = "https://atcoder.jp/contests/abc171/submissions/me"
 gvsAgent = "gvscoder/1.0"
 
 -- Loginリクエストの生成
-makeLoginReq req name pass csrf = req{
+makeLoginReq req user = req{
     method = "POST",
     queryString = BS.concat [
-            "?csrf_token=", csrf,
-            "&username=", name,
-            "&password=", pass
+            "?csrf_token=", csrf user,
+            "&username=", name user,
+            "&password=", pass user
             ]
     }
-
--- CSRFトークンのパース
-findCSRFToken :: BS.ByteString -> Result String
-findCSRFToken = parseString csrfP (Columns 0 0).BS.unpack.head.filter (BS.isInfixOf "csrf_token"). BS.lines
 
 attatchCookie req' cookie = do
     now <- getCurrentTime
@@ -42,34 +36,36 @@ startGVSCoder = do
     username <- putStrLn "username:" >> BS.getLine
     password <- putStrLn "password:" >> BS.getLine
     contestName <- putStrLn "contest name? (e.g. \"abc171\")" >> BS.getLine
-    let user = User{name = username, pass = password, contest = contestName}
     port <- readFile "portname"
     putStrLn port
-    BS.putStrLn $ BS.append (name user) "，GVS-Coderへようこそ!"
+    BS.putStrLn $ BS.append username "，welcome to GVS-Coder !!"
 
     -- setCurses
     manager <- newManager tlsManagerSettings
     initReq' <- parseRequest "https://atcoder.jp/login"
     let initReq = initReq' {requestHeaders = [("User-Agent", gvsAgent)]}
     getLoginRes <- httpLbs initReq manager
-    BS.putStrLn.toStrict $ responseBody getLoginRes
-    let gvsCookie = responseCookieJar getLoginRes
-    putStrLn.show $ "GET LoginPage : " ++ show (responseStatus getLoginRes)
+    -- BS.putStrLn.toStrict $ responseBody getLoginRes
+    let cookie1 = responseCookieJar getLoginRes
+    -- putStrLn.show $ "GET LoginPage : " ++ show (responseStatus getLoginRes)
     let csrfToken = findCSRFToken . toStrict $ responseBody getLoginRes
     case csrfToken of
         Success token -> do
-            BS.putStr "CSRF:Token : " >> putStrLn (token) >> BS.putStrLn (BS.pack token)
-            let req' = makeLoginReq initReq username password (BS.pack token)
+            let user = User{name = username, pass = password, csrf= BS.pack token, contest = contestName}
+            -- BS.putStr "CSRF:Token : " >> BS.putStrLn (csrf user)
             -- Cookieの挿入
-            req <- attatchCookie req' gvsCookie
+            req <- attatchCookie (makeLoginReq initReq user) cookie1
             -- loginのPOST
             postLoginRes <- httpLbs req manager
+
+            let cookie' = responseCookieJar postLoginRes
+            
             putStrLn.show $ "POST LoginPage : " ++ show (responseStatus postLoginRes)
             putStrLn $ (replicate 10 '=')
             case responseStatus postLoginRes of
-                status200 -> loopGVS req manager user (0,0)
-                _ -> BS.putStrLn "認証に失敗しました"
-        Failure e -> BS.putStrLn "CSRFトークンの取得に失敗しました.." >> print e
+                status200 -> loopGVS manager (user{cookie=cookie'},initStatus)
+                _ -> BS.putStrLn "fail to authentification"
+        Failure e -> BS.putStrLn "fail to get CSRF token. try again" >> print e
 
     -- drawLnColored 1 "GVS-Coder"
     {-
@@ -79,21 +75,28 @@ startGVSCoder = do
     -- waitAnyKey
     -- finishCurse
 
-getACs req' manager user = do
-    let req = req' {path = BS.concat ["https://atcoder.jp/contests/", contest user, "/submissions/me"]}
-    putStrLn $ replicate 40 '8'
-    BS.putStrLn $ BS.append "リクエストパス = " $ path req
-    BS.putStrLn . BS.pack.show $  req
+getACs manager user = do
+    req'' <- parseRequest "https://atcoder.jp"
+    let req' = req'' {
+        path = BS.concat ["/contests/", contest user, "/submissions/me"],
+        requestHeaders= [("User-Agent", gvsAgent)]
+    }
+    req <- attatchCookie req' (cookie user)
     res <- httpLbs req manager
-    BS.putStrLn.toStrict.responseBody $ res
-    return (1,1)
+    let newCookie = responseCookieJar res
+    -- BS.putStrLn.toStrict.responseBody $ res
+    let js = judgementP (BS.unpack $ contest user) . BS.unpack . toStrict $ responseBody res
+    mapM_ (putStrLn.show) js
+    return (user{cookie = newCookie}, initStatus)
 
-loopGVS req manager user (prevAC, prevOthers) = do
-    (nowAC, nowOthers) <- getACs req manager user
-    if nowAC > prevAC 
+
+
+loopGVS manager (user, prevStatus) = do
+    (user', newStatus) <- getACs manager user
+    if ac newStatus > ac prevStatus
         then putStrLn "Accepted!" --drawLnColored 3 "Accepted!!"
-        else if nowOthers > prevOthers
+        else if countExceptAC newStatus > countExceptAC prevStatus
             --then drawLnColored 6 "Rejected!!" >> drawLnColored 1 "GVS ON" >> gvsON gvs
             then putStrLn "Rejected!!"
             else return ()
-    -- loopGVS req manager gvs name (nowAC, nowOthers)
+    -- loopGVS manager gvs user newStatus
