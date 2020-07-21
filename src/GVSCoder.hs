@@ -15,6 +15,8 @@ import Data.Time.Clock (getCurrentTime)
 import Data.Aeson (object, (.=), encode)
 import GVSCoder.Type
 import Control.Concurrent (threadDelay)
+import GHC.IO.Handle (hSetEcho)
+import System.IO (stdin)
 
 acPath = "https://atcoder.jp/contests/abc171/submissions/me"
 gvsAgent = "gvscoder/1.0"
@@ -35,7 +37,9 @@ attatchCookie req' cookie = do
 
 startGVSCoder = do
     username <- putStrLn "username:" >> BS.getLine
+    hSetEcho stdin False
     password <- putStrLn "password:" >> BS.getLine
+    hSetEcho stdin True
     contestName <- putStrLn "contest name? (e.g. \"abc171\")" >> BS.getLine
     port <- readFile "portname"
     -- open GVS
