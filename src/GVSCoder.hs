@@ -38,9 +38,12 @@ startGVSCoder = do
     password <- putStrLn "password:" >> BS.getLine
     contestName <- putStrLn "contest name? (e.g. \"abc171\")" >> BS.getLine
     port <- readFile "portname"
-    BS.putStrLn $ BS.append username "，welcome to GVS-Coder !!"
-
-    -- setCurses
+    -- open GVS
+    gvs <- openGVS port
+    
+    -- start curses
+    setCurses
+    drawLnColored 3 $ (BS.unpack username) ++ "，welcome to GVS-Coder !!"
     manager <- newManager tlsManagerSettings
     initReq' <- parseRequest "https://atcoder.jp/login"
     let initReq = initReq' {requestHeaders = [("User-Agent", gvsAgent)]}
@@ -60,22 +63,18 @@ startGVSCoder = do
 
             let cookie' = responseCookieJar postLoginRes
             
-            putStrLn.show $ "POST LoginPage : " ++ show (responseStatus postLoginRes)
-            putStrLn $ (replicate 10 '=')
+            --putStrLn.show $ "POST LoginPage : " ++ show (responseStatus postLoginRes)
+            drawLn $ (replicate 10 '=')
             case responseStatus postLoginRes of
                 status200 -> do
                     (user', status) <- getACs manager (user{cookie = cookie'})
-                    loopGVS manager user' status
-                _ -> BS.putStrLn "fail to authentification"
-        Failure e -> BS.putStrLn "fail to get CSRF token. try again" >> print e
+                    loopGVS gvs manager user' status
+                _ -> drawLn "fail to authentification"
+        Failure e -> drawLn "fail to get CSRF token. try again" >> print e
 
-    -- drawLnColored 1 "GVS-Coder"
-    {-
-    gvs <- openGVS port
-    loopGVS initRequest manager gvs name <*> getACs initRequest manager username
-    -}
-    -- waitAnyKey
-    -- finishCurse
+    drawLnColored 1 "GVS-Coder"
+    waitAnyKey
+    finishCurse
 
 getACs :: Manager -> User -> IO (User, WholeStatus)
 getACs manager user = do
@@ -87,24 +86,22 @@ getACs manager user = do
     req <- attatchCookie req' (cookie user)
     res <- httpLbs req manager
     let newCookie = responseCookieJar res
-    -- BS.putStrLn.toStrict.responseBody $ res
     let js = judgementP (BS.unpack $ contest user) . BS.unpack . toStrict $ responseBody res
-    mapM_ (putStrLn.show) js
     return (user{cookie = newCookie}, js)
 
-loopGVS :: Manager -> User -> WholeStatus -> IO ()
-loopGVS manager user prevStatus = do
+loopGVS :: GVS -> Manager -> User -> WholeStatus -> IO ()
+loopGVS gvs manager user prevStatus = do
     (user', newStatus) <- getACs manager user
     if sumAc newStatus > sumAc prevStatus
-        then putStrLn "Accepted!" --drawLnColored 3 "Accepted!!"
+        then drawLnColored 4 "Accepted!" --drawLnColored 3 "Accepted!!"
         else if any isWJ newStatus
-            then putStrLn "Waiting On Judge..."
+            then drawLn "Waiting On Judge..."
             else if countExceptAC newStatus > countExceptAC prevStatus
                 --then drawLnColored 6 "Rejected!!" >> drawLnColored 1 "GVS ON" >> gvsON gvs
-                then putStrLn "Rejected!!"
-                else putStrLn "No change..."
+                then drawColored 6 "Rejected!!" >> drawLnColored 1 "GVS!!!!" >> gvsON gvs
+                else drawLn "No change..."
     threadDelay (4*10^6) -- micro seconds
-    loopGVS manager user' newStatus
+    loopGVS gvs manager user' newStatus
 
 isWJ = (\status -> wj status > 0).snd
 

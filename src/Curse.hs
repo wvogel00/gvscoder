@@ -32,6 +32,6 @@ drawLnColored color text = drawColored color text >> C.addLn
 
 finishCurse = CH.end >> C.endWin
 
-draw str = C.wAddStr C.stdScr str >> C.refresh
+draw = drawColored 7
 
-drawLn str = draw str >> C.addLn
+drawLn = drawLnColored 7
