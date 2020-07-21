@@ -19,8 +19,9 @@ sendCommand :: GVS -> Channel -> Current -> IO Int
 sendCommand gvs ch i = send gvs . pack $ makeCommand ch i
 
 makeCommand :: Channel -> Current -> [Word8]
-makeCommand ch i = map fromIntegral [comm1, comm2] where
+makeCommand ch i = map fromIntegral [comm0, comm1, comm2] where
     pole = if i >= 0 then 1 else 0
+    comm0 = 71  -- 識別番号
     comm1 = (shiftL ch 5) + (shiftL pole 4) + (shiftR i 8)
     comm2 = (2^8-1) .&. i
 
@@ -34,7 +35,7 @@ makeRectangleWave gvs ch i interval = forM_ [1..20] f where
 
 
 gvsON :: GVS -> IO ()
-gvsON gvs = makeRectangleWave gvs 0 3000 50
+gvsON gvs = makeRectangleWave gvs 1 3000 50 -- ch番号1のGVS回路
 
 testGVS gvs ch = makeRectangleWave gvs ch 3000 50
 
