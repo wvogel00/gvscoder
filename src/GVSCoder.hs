@@ -23,15 +23,15 @@ gvsAgent = "gvscoder/1.0"
 makeLoginReq req name pass csrf = req{
     method = "POST",
     queryString = BS.concat [
-            "?csrf_token=", (BS.pack csrf),
+            "?csrf_token=", BS.pack csrf,
             "&username=", BS.pack name,
             "&password=", BS.pack pass
             ]
     }
-    
+
 -- CSRFトークンのパース
 findCSRFToken :: BS.ByteString -> Result String
-findCSRFToken = parseByteString csrfP (Columns 0 0).head.filter (isInfixOf "csrf_token".BS.unpack). BS.lines
+findCSRFToken = parseString csrfP (Columns 0 0).BS.unpack.head.filter (BS.isInfixOf "csrf_token"). BS.lines
 
 attatchCookie req' cookie = do
     now <- getCurrentTime
@@ -48,12 +48,13 @@ startGVSCoder = do
     initReq' <- parseRequest "https://atcoder.jp/login"
     let initReq = initReq' {requestHeaders = [("User-Agent", gvsAgent)]}
     getLoginRes <- httpLbs initReq manager
+    BS.putStrLn.toStrict $ responseBody getLoginRes
     let gvsCookie = responseCookieJar getLoginRes
     putStrLn.show $ "GET LoginPage : " ++ show (responseStatus getLoginRes)
     let csrfToken = findCSRFToken . toStrict $ responseBody getLoginRes
     case csrfToken of
         Success token -> do
-            BS.putStr "CSRF:Token : " >> BS.putStrLn (BS.pack token)
+            BS.putStr "CSRF:Token : " >> putStrLn (token) >> BS.putStrLn (BS.pack token)
             let req' = makeLoginReq initReq username password token
             -- Cookieの挿入
             req <- attatchCookie req' gvsCookie
@@ -61,8 +62,8 @@ startGVSCoder = do
             -- loginのPOST
             postLoginRes <- httpLbs req manager
             putStrLn.show $ "POST LoginPage : " ++ show (responseStatus postLoginRes)
-            BS.putStrLn.toStrict $ responseBody postLoginRes
-            putStrLn $ replicate 20 '='
+            --BS.putStrLn.toStrict $ responseBody postLoginRes
+            putStrLn $ (replicate 10 '=')
             case responseStatus postLoginRes of
                 status200 -> loopGVS req manager username (0,0)
                 _ -> BS.putStrLn "認証に失敗しました"
