@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Parser (csrfP, countExceptAC, judgementP, findCSRFToken) where
+module Parser (csrfP, judgementP, findCSRFToken) where
 
 import Text.Trifecta
 import Text.Trifecta.Delta (Delta(..))
@@ -43,8 +43,6 @@ extractJudgeText contest = makeTuple.filter (\x -> problemNameF x || judgementF 
     makeTuple [] = []
     makeTuple (prob:judge:xs) = (prob,judge) : makeTuple xs
 ---------------------------------------------------------------------------
-
-countExceptAC status = sum $ map (\f -> f status) [wa, tle, mle, re, ce, qle, ie, wj, wr]
 
 updateStatus status tag = case tag of
     AC      -> status{ac = ac status+1}

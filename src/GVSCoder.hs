@@ -14,6 +14,7 @@ import Debug.Trace (traceShowId)
 import Data.Time.Clock (getCurrentTime)
 import Data.Aeson (object, (.=), encode)
 import GVSCoder.Type
+import Control.Concurrent (threadDelay)
 
 acPath = "https://atcoder.jp/contests/abc171/submissions/me"
 gvsAgent = "gvscoder/1.0"
@@ -37,7 +38,6 @@ startGVSCoder = do
     password <- putStrLn "password:" >> BS.getLine
     contestName <- putStrLn "contest name? (e.g. \"abc171\")" >> BS.getLine
     port <- readFile "portname"
-    putStrLn port
     BS.putStrLn $ BS.append username "，welcome to GVS-Coder !!"
 
     -- setCurses
@@ -63,7 +63,9 @@ startGVSCoder = do
             putStrLn.show $ "POST LoginPage : " ++ show (responseStatus postLoginRes)
             putStrLn $ (replicate 10 '=')
             case responseStatus postLoginRes of
-                status200 -> loopGVS manager (user{cookie=cookie'},initStatus)
+                status200 -> do
+                    (user', status) <- getACs manager (user{cookie = cookie'})
+                    loopGVS manager user' status
                 _ -> BS.putStrLn "fail to authentification"
         Failure e -> BS.putStrLn "fail to get CSRF token. try again" >> print e
 
@@ -75,6 +77,7 @@ startGVSCoder = do
     -- waitAnyKey
     -- finishCurse
 
+getACs :: Manager -> User -> IO (User, WholeStatus)
 getACs manager user = do
     req'' <- parseRequest "https://atcoder.jp"
     let req' = req'' {
@@ -87,16 +90,26 @@ getACs manager user = do
     -- BS.putStrLn.toStrict.responseBody $ res
     let js = judgementP (BS.unpack $ contest user) . BS.unpack . toStrict $ responseBody res
     mapM_ (putStrLn.show) js
-    return (user{cookie = newCookie}, initStatus)
+    return (user{cookie = newCookie}, js)
 
-
-
-loopGVS manager (user, prevStatus) = do
+loopGVS :: Manager -> User -> WholeStatus -> IO ()
+loopGVS manager user prevStatus = do
     (user', newStatus) <- getACs manager user
-    if ac newStatus > ac prevStatus
+    if sumAc newStatus > sumAc prevStatus
         then putStrLn "Accepted!" --drawLnColored 3 "Accepted!!"
-        else if countExceptAC newStatus > countExceptAC prevStatus
-            --then drawLnColored 6 "Rejected!!" >> drawLnColored 1 "GVS ON" >> gvsON gvs
-            then putStrLn "Rejected!!"
-            else return ()
-    -- loopGVS manager gvs user newStatus
+        else if any isWJ newStatus
+            then putStrLn "Waiting On Judge..."
+            else if countExceptAC newStatus > countExceptAC prevStatus
+                --then drawLnColored 6 "Rejected!!" >> drawLnColored 1 "GVS ON" >> gvsON gvs
+                then putStrLn "Rejected!!"
+                else putStrLn "No change..."
+    threadDelay (4*10^6) -- micro seconds
+    loopGVS manager user' newStatus
+
+isWJ = (\status -> wj status > 0).snd
+
+sumAc, countExceptAC :: WholeStatus -> Int
+sumAc = sum.map ((\status -> ac status).snd) 
+
+countExceptAC = sum.map ((\status -> f status).snd) where
+    f status = sum $ map (\g -> g status) [wa, tle, mle, re, ce, qle, ie, wr]
