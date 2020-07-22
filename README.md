@@ -1,4 +1,4 @@
-# gvscoder
+ # gvscoder
 
 ## ACが獲れないなら，AC電流を流せば良いじゃない？
 ___
@@ -28,10 +28,6 @@ __GVS__ (galvanic vestibular stimulation : 前庭電気刺激)は，
 古くは医療の分野で使われていた電気刺激手法．電流を流すことで平衡感覚を操作することが出来ます．シンプルな構成だと，左右の乳様突起に電極を貼付して電気を流すだけで済みます．
 
 近年ではVR酔いの軽減や，VRへの没入感の向上などに利用・研究が勧められています．
-
-参考URL :
-- https://sites.google.com/site/gvslover/
-- https://www.moguravr.com/osaka-univ-gvs/
 
 ## フロー
 ___
