@@ -13,7 +13,7 @@ type Current = Int
 type Channel = Int
 
 openGVS :: Port -> IO GVS
-openGVS port = openSerial port defaultSerialSettings{ commSpeed = CS115200 }
+openGVS port = openSerial port defaultSerialSettings{ commSpeed = CS9600 }
 
 sendCommand :: GVS -> Channel -> Current -> IO Int
 sendCommand gvs ch i = send gvs . pack $ makeCommand ch i
