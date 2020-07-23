@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: hscurses-1.4.2.0@sha256:185f294036aaced6a4cf72c994339286e8e7886f5a327c3ccac898066985c528,2118
-    pantry-tree:
-      size: 1369
-      sha256: 42db70051cc8c1e6ff628078c0b201c4607d07cd271a149bc972203d5d51721b
-  original:
-    hackage: hscurses-1.4.2.0
-- completed:
     hackage: serialport-0.4.4@sha256:909dddff8cbafb55a78725e60c0f931696f895a8967bb91facb109f454fb7bd7,1037
     pantry-tree:
       size: 517
