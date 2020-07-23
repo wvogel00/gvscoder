@@ -24,7 +24,7 @@ dependencies:
 - http-conduit >= 2.3
 - http-client
 - http-client-tls
-- hscurses
+# - hscurses
 - trifecta >= 1.7
 - parsec >= 3.1
 - bytestring

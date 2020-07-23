@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 769cff587fce9cb479fbc7183a8d6ca0ffed5d8450d9ee91d77fb451b9cba43c
+-- hash: 7ed40eb24d00e7f72754900bfd69169746a493ed9e9ae247a612b813c30b108d
 
 name:           gvscoder
 version:        0.1.0.0
@@ -27,9 +27,10 @@ source-repository head
 
 library
   exposed-modules:
-      Curse
+--      Curse
       GVS
       GVSCoder
+      GVSCoder.Type
       Parser
   other-modules:
       Paths_gvscoder
@@ -39,7 +40,7 @@ library
       aeson >=1.4
     , base >=4.7 && <5
     , bytestring
-    , hscurses
+--    , hscurses
     , http-client
     , http-client-tls
     , http-conduit >=2.3
@@ -62,7 +63,7 @@ executable gvscoder-exe
     , base >=4.7 && <5
     , bytestring
     , gvscoder
-    , hscurses
+--    , hscurses
     , http-client
     , http-client-tls
     , http-conduit >=2.3
@@ -86,7 +87,7 @@ test-suite gvscoder-test
     , base >=4.7 && <5
     , bytestring
     , gvscoder
-    , hscurses
+--    , hscurses
     , http-client
     , http-client-tls
     , http-conduit >=2.3

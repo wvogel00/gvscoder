@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module GVSCoder where
 
-import Curse
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import qualified Data.ByteString.Char8 as BS
@@ -45,8 +44,7 @@ startGVSCoder = do
     gvs <- openGVS port
     
     -- start curses
-    setCurses
-    drawLnColored 3 $ (BS.unpack username) ++ "，welcome to GVS-Coder !!"
+    putStrLn $ (BS.unpack username) ++ "，welcome to GVS-Coder !!"
 
     manager <- newManager tlsManagerSettings
     initReq' <- parseRequest "https://atcoder.jp/login"
@@ -66,16 +64,13 @@ startGVSCoder = do
 
             let cookie' = responseCookieJar postLoginRes
             
-            drawLn $ (replicate 10 '=')
+            putStrLn $ (replicate 10 '=')
             case responseStatus postLoginRes of
                 status200 -> do
                     (user', status) <- getACs manager (user{cookie = cookie'})
                     loopGVS gvs manager user' status
-                _ -> drawLn "fail to authentification"
-        Failure e -> drawLn "fail to get CSRF token. try again" >> print e
-
-    drawLnColored 1 "GVS-Coder"
-    finishCurse
+                _ -> putStrLn "fail to authentification"
+        Failure e -> putStrLn "fail to get CSRF token. try again" >> print e
 
 getACs :: Manager -> User -> IO (User, WholeStatus)
 getACs manager user = do
@@ -93,14 +88,14 @@ getACs manager user = do
 loopGVS :: GVS -> Manager -> User -> WholeStatus -> IO ()
 loopGVS gvs manager user prevStatus = do
     (user', newStatus) <- getACs manager user
-    
+
     if sumAc newStatus > sumAc prevStatus
-        then drawLnColored 4 "Accepted!"
+        then putStrLn "Accepted!"
         else if any isWJ newStatus
-            then drawLn "Waiting On Judge..."
+            then putStrLn "Waiting On Judge..."
             else if countExceptAC newStatus > countExceptAC prevStatus
-                then drawColored 6 "Rejected!!" >> drawLnColored 1 "GVS!!!!" >> gvsON gvs
-                else drawLn "No change..."
+                then putStrLn "Rejected!!" >> putStrLn "GVS!!!!" >> gvsON gvs
+                else putStrLn "No change..."
     threadDelay (4*10^6) -- micro seconds
     loopGVS gvs manager user' newStatus
 
