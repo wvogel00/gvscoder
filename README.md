@@ -48,6 +48,10 @@ ___
 1. atcoderのサイトからファイルを提出する．
 1. ACを取得すればAccepted!が，そうでなければGVSが流れる
 
+## 動画
+youtubeに動画をあげています．
+https://www.youtube.com/watch?v=6EC5jIvbI9M
+
 ## その他
 - 過去にMaker Faire 2018に出展した際のソースコードは
 https://github.com/wvogel00/GVS
